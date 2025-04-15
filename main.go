@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/jamieholliday/pokedexcli/internal"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type cliCommand struct {
@@ -19,6 +21,7 @@ type cliCommand struct {
 type config struct {
 	nextUrl string
 	prevUrl string
+	cache   *internal.Cache
 }
 
 type LocationAreas struct {
@@ -31,9 +34,66 @@ type LocationAreas struct {
 	} `json:"results"`
 }
 
+type Location struct {
+	EncounterMethodRates []struct {
+		EncounterMethod struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"encounter_method"`
+		VersionDetails []struct {
+			Rate    int `json:"rate"`
+			Version struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"version"`
+		} `json:"version_details"`
+	} `json:"encounter_method_rates"`
+	GameIndex int `json:"game_index"`
+	ID        int `json:"id"`
+	Location  struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"location"`
+	Name  string `json:"name"`
+	Names []struct {
+		Language struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+		Name string `json:"name"`
+	} `json:"names"`
+	PokemonEncounters []struct {
+		Pokemon struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokemon"`
+		VersionDetails []struct {
+			EncounterDetails []struct {
+				Chance          int `json:"chance"`
+				ConditionValues []struct {
+					Name string `json:"name"`
+					URL  string `json:"url"`
+				} `json:"condition_values"`
+				MaxLevel int `json:"max_level"`
+				Method   struct {
+					Name string `json:"name"`
+					URL  string `json:"url"`
+				} `json:"method"`
+				MinLevel int `json:"min_level"`
+			} `json:"encounter_details"`
+			MaxChance int `json:"max_chance"`
+			Version   struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"version"`
+		} `json:"version_details"`
+	} `json:"pokemon_encounters"`
+}
+
 var conf = &config{
 	nextUrl: "https://pokeapi.co/api/v2/location-area",
 	prevUrl: "",
+	cache:   internal.NewCache(5 * time.Minute),
 }
 
 var supportedCommands = map[string]cliCommand{}
@@ -55,46 +115,60 @@ func commandHelp(c *config) error {
 }
 
 func commandMap(c *config) error {
-	if c.nextUrl == "" {
-		fmt.Println("You are on the last page.")
-		return nil
-	}
-	locations, err := getLocations(c, c.nextUrl)
-	if err != nil {
-		return err
-	}
-	for _, location := range locations {
-		fmt.Println(location)
-	}
+	getLocationsStrings(c, c.nextUrl)
 	return nil
 }
 
 func commandMapb(c *config) error {
-	if c.prevUrl == "" {
+	getLocationsStrings(c, c.prevUrl)
+	return nil
+}
+
+func getLocationsStrings(c *config, url string) error {
+	if url == "" {
 		fmt.Println("You are on the first page.")
 		return nil
 	}
-	locations, err := getLocations(c, c.prevUrl)
+	var locations []byte
+	if c.cache != nil {
+		if cachecLocationsData, exists := c.cache.Get(url); exists {
+			locations = cachecLocationsData
+		}
+	}
+	if len(locations) == 0 {
+		locs, err := getLocationsApi(c, url)
+		locations = locs
+		c.cache.Add(url, locations)
+		if err != nil {
+			return err
+		}
+	}
+	locationsJson, err := getLocationsJson(c, locations)
 	if err != nil {
 		return err
 	}
-	for _, location := range locations {
+	for _, location := range locationsJson {
 		fmt.Println(location)
 	}
 	return nil
 }
 
-func getLocations(c *config, url string) ([]string, error) {
+func getLocationsApi(c *config, url string) ([]byte, error) {
 	res, err := http.Get(url)
 	if err != nil {
-		return []string{}, err
+		return []byte{}, err
 	}
 	defer res.Body.Close()
-	locationAreas := &LocationAreas{}
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return []string{}, err
+		return []byte{}, err
 	}
+	return data, nil
+
+}
+
+func getLocationsJson(c *config, data []byte) ([]string, error) {
+	locationAreas := &LocationAreas{}
 	json.Unmarshal(data, locationAreas)
 	if locationAreas.Next == nil {
 		c.nextUrl = ""
