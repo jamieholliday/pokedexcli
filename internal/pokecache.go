@@ -48,12 +48,12 @@ func (c *Cache) reapLoop() {
 		select {
 		case <-ticker.C:
 			c.mu.Lock()
-			defer c.mu.Unlock()
 			for key, entry := range c.Cache {
 				if time.Since(entry.createdAt) > c.interval {
 					delete(c.Cache, key)
 				}
 			}
+			c.mu.Unlock()
 		case <-c.done:
 			return
 		}

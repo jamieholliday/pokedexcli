@@ -39,9 +39,9 @@ func TestAddGet(t *testing.T) {
 }
 
 func TestReapLoop(t *testing.T) {
-	const baseTime = 5 * time.Millisecond
-	const waitTime = baseTime + 5*time.Millisecond
-	fmt.Println("Testing reap loop")
+	const baseTime = 50 * time.Millisecond
+	const waitTime = baseTime + 50*time.Millisecond
+
 	cache := NewCache(baseTime)
 	cache.Add("https://example.com", []byte("example"))
 	_, ok := cache.Get("https://example.com")
@@ -55,6 +55,8 @@ func TestReapLoop(t *testing.T) {
 	_, ok = cache.Get("https://example.com")
 	if ok {
 		t.Errorf("expected to not find key %s in cache", "https://example.com")
+		cache.Stop()
 		return
 	}
+	cache.Stop()
 }
