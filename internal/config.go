@@ -5,15 +5,24 @@ import (
 )
 
 type Config struct {
-	NextUrl string
-	PrevUrl string
-	Cache   *Cache
+	NextUrl          string
+	PrevUrl          string
+	Cache            *Cache
+	LocationEndpoint string
+	PokemonEndpoint  string
+	Pokedex          map[string]Pokemon
 }
+
+var api = "https://pokeapi.co/api/v2"
+var LocationEndpoint = api + "/location-area"
 
 func CreateConfig() *Config {
 	return &Config{
-		NextUrl: "https://pokeapi.co/api/v2/location-area",
-		PrevUrl: "",
-		Cache:   NewCache(5 * time.Minute),
+		LocationEndpoint: LocationEndpoint,
+		PokemonEndpoint:  api + "/pokemon",
+		NextUrl:          LocationEndpoint,
+		PrevUrl:          "",
+		Cache:            NewCache(5 * time.Minute),
+		Pokedex:          make(map[string]Pokemon),
 	}
 }
