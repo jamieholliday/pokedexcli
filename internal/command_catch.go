@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
-	// "math/rand"
 )
 
 type Pokemon struct {
@@ -15,6 +14,21 @@ type Pokemon struct {
 	IsDefault      bool   `json:"is_default"`
 	Order          int    `json:"order"`
 	Weight         int    `json:"weight"`
+	Stats          []struct {
+		BaseStat int `json:"base_stat"`
+		Effort   int `json:"effort"`
+		Stat     struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"stat"`
+	} `json:"stats"`
+	Types []struct {
+		Slot int `json:"slot"`
+		Type struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"type"`
+	} `json:"types"`
 }
 
 func CommandCatch(c *Config, args []string) error {
