@@ -26,6 +26,7 @@ func init() {
 	internal.AddCliCommand("explore", "Explore a location", internal.CommandExplore)
 	internal.AddCliCommand("catch", "Try and catch a pokemon", internal.CommandCatch)
 	internal.AddCliCommand("inspect", "Inspect caught pokemon", internal.CommandInspect)
+	internal.AddCliCommand("pokedex", "List caught pokemon", internal.CommandPokedex)
 }
 
 func main() {
